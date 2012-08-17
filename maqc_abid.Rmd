@@ -15,4 +15,9 @@ options(save.defaults=list(compress="xz"), stringsAsFactors=FALSE)
 
 ## Abstract
 
-Current transcriptomics analyses are hampered by 
+Current transcriptomics analyses are hampered by an inability to easily convert between various types of identifiers,
+making it difficult to easily compare the results of studies performed using different types of platforms. AbsIDConvert,
+a tool recently developed by the Rouchka group, makes interconversion of identifiers possible by mapping each type of
+identifier to a genomic interval, and using overlapping intervals as the basis for the conversion. Using the MicroArray
+Quality Control (MAQC) dataset as an example, this work will demonstrate how the agreement between different experiments 
+changes depending on how the platform specific identifiers are converted to allow comparison.
