@@ -1,0 +1,18 @@
+```{r knitrSetup}
+# sets output for inline results nicely
+knit_hooks$set(inline = identity) 
+
+# kills knitr if there is an error, therefore we don't waste time generating error messages
+knit_hooks$set(error = function(x, options) stop(x)) 
+```
+
+```{r rsetup}
+# these are extremely useful options for working in R
+options(save.defaults=list(compress="xz"), stringsAsFactors=FALSE)
+```
+
+# MAQC AbsIDConvert
+
+## Abstract
+
+Current transcriptomics analyses are hampered by 
