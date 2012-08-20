@@ -63,8 +63,9 @@ affyDir <- "GSE5350_MAQC_AFX_123456_120CELs"
 nRep <- 5
 pDat <- data.frame(Sample=c(rep("A",nRep), rep("B", nRep)))
 fileNames <- paste(rep("AFX_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".CEL", sep="" )
-affyDat <- ReadAffy(filenames=fileNames, celfile.path=affyDir, phenoData=pDat)
-arrayQualityMetrics(expressionset=affyDat, outdir="affyQuality", do.logtransform=T, force=T)
+affyCel <- ReadAffy(filenames=fileNames, celfile.path=affyDir, phenoData=pDat)
+arrayQualityMetrics(expressionset=affyCel, outdir="affyQuality", do.logtransform=T, force=T)
+affyNorm <- rma(affyCel)
 ```
 
 ```{r readAgilent}
