@@ -15,6 +15,35 @@ require(limma)
 require(genefilter)
 ```
 
+```{r functionDefs, echo=FALSE}
+# this is where I define any custom functions that I want to use
+
+### findMultiple: determine if there are multiple annotations to a probe id. Particularly relevant for the Affy annotations
+findSingle <- function(inData, sepStr){
+	splitup <- strsplit(inData, sepStr, fixed=TRUE)
+	nMult <- sapply(splitup, length)
+	return(nMult == 1) # this actually returns false if it is empty as well. useful side effect
+}
+
+### calcAverage: using a two column data frame for mapping, and a matrix of values to 
+# calculate averages
+calcAverageGene <- function(map2map, fromCol, toCol, inVals){
+	allto <- unique(map2map[,toCol])
+	hasTo <- nchar(allto) != 0
+	allto <- allto[hasTo]
+	allto <- na.omit(allto)
+	outVals <- matrix(0, length(allto), ncol(inVals)) # set up output
+	rownames(outVals) <- allto
+	colnames(outVals) <- colnames(inVals)
+	
+	invisible(sapply(allto, function(x){
+		useName <- map2map[map2map[,toCol] %in% x, fromCol]
+		outVals[x,] <<- apply(inVals[useName, , drop=F], 2, mean) # get average for each array
+	}))
+	return(outVals)
+}
+```
+
 # MAQC AbsIDConvert
 
 ## Authors
@@ -95,7 +124,7 @@ affyEset <- affyEset[keepAffy,] # got rid of the control probes
 
 ```{r getAgilentSignal}
 notControl <- agilNorm$genes$ControlType == 0
-spotID <- agilNorm$genes$ProbeName[notControl]
+spotID <- rownames(agilNorm$genes[notControl,])
 
 agilEset <- agilNorm$E[notControl,]
 row.names(agilEset) <- spotID
@@ -103,8 +132,33 @@ row.names(agilEset) <- spotID
 
 ```{r getMaps}
 affyMap <- read.table("GPL570-13270.txt", header=T, skip=16, sep="\t", quote="", strip.white=T)
+keepAffyMap <- grep("^AFFX", affyMap$ID, invert=T)
+affyMap <- affyMap[keepAffyMap,]
+
 agilMap <- read.table("GPL1708-20418.txt", header=T, skip=20, sep="\t", quote="", comment.char="", strip.white=T)
+agilMap <- agilMap[(agilMap$CONTROL_TYPE == FALSE),]
 ```
+
+### Gene
+
+Using the manufacturer annotations of probe ID to gene, assign probes and probesets to Entrez genes, and then generate an average intensity for all the probe (sets) annotated to that gene, as well as across the condition.
+
+```{r affySignal}
+affyE1 <- findSingle(affyMap$ENTREZ_GENE_ID, "///")
+affyE1 <- affyMap[affyE1, c("ID", "ENTREZ_GENE_ID")]
+affyEset <- affyEset[(row.names(affyEset) %in% affyE1$ID),]
+
+affyAvgEnt <- calcAverageGene(affyE1, "ID", "ENTREZ_GENE_ID", affyEset)
+affyAvgEnt.A <- apply(affyAvgEnt[,pDat$Sample=="A"], 1, mean)
+affyAvgEnt.B <- apply(affyAvgEnt[,pDat$Sample == "B"], 1, mean)
+```
+
+```{r agilSignal}
+agilEntMap <- agilMap[, c("ID", "GENE")]
+agilEntMap <- sapply(names(agilEntMap), function(x){as.character(agilEntMap[,x])})
+agilAvgEnt <- calcAverageGene(agilEntMap, "ID", "GENE", agilEset)
+```
+
 
 ### References
 
