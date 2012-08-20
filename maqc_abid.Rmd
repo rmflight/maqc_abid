@@ -1,4 +1,4 @@
-```{r knitrSetup}
+```{r knitrSetup, echo=FALSE}
 # sets output for inline results nicely
 knit_hooks$set(inline = identity) 
 
@@ -6,18 +6,38 @@ knit_hooks$set(inline = identity)
 knit_hooks$set(error = function(x, options) stop(x)) 
 ```
 
-```{r rsetup}
+```{r rsetup, echo=FALSE}
 # these are extremely useful options for working in R
 options(save.defaults=list(compress="xz"), stringsAsFactors=FALSE)
 ```
 
 # MAQC AbsIDConvert
 
+## Authors
+
+Robert M Flight <robert.flight@louisville.edu>, Fahim Mohammad, Eric C Rouchka <eric.rouchka@louisville.edu>
+
 ## Abstract
 
+Background:
 Current transcriptomics analyses are hampered by an inability to easily convert between various types of identifiers,
 making it difficult to easily compare the results of studies performed using different types of platforms. AbsIDConvert,
 a tool recently developed by the Rouchka group, makes interconversion of identifiers possible by mapping each type of
 identifier to a genomic interval, and using overlapping intervals as the basis for the conversion. Using the MicroArray
 Quality Control (MAQC) dataset as an example, this work will demonstrate how the agreement between different experiments 
 changes depending on how the platform specific identifiers are converted to allow comparison.
+
+Methodology:
+Three types of conversions will be utilized to enable comparison of the data:
+ 1 - Manufacterer supplied probe annotations to Entrez Gene and Refseq Transcripts
+ * - AbsIDConvert based conversion to Entrez Gene and Refseq Transcripts
+ * - Direct overlap of the defined genomic intervals for each probe.
+For each conversion, the correlation of the signal intensities for matching probes will be investigated, as well as the
+rank of probes (using log fold change and p-value) after testing for differential expression between two conditions.
+
+Results: 
+AbsIDConvert was used to compare the intensities and ranks of probes measured in the MAQC dataset on the Affymetrix(R) 
+and Agilent(R) one color platforms. Agreement between the platforms was found to improve as the different methodologies
+to define the **same** measurement were modified, with **1** having the least agreement, and **3** having the best
+agreement between the two platforms. This demonstrates that using genomic intervals as a basis for inter-platform comparisons
+is reliable, and improves the reproducibility of results obtained by multiple high-throughput genomics platforms.
