@@ -12,6 +12,7 @@ options(save.defaults=list(compress="xz"), stringsAsFactors=FALSE)
 require(affy)
 require(arrayQualityMetrics)
 require(limma)
+require(genefilter)
 ```
 
 # MAQC AbsIDConvert
@@ -56,7 +57,7 @@ is reliable, and improves the reproducibility of results obtained by multiple hi
 set of mRNA samples (A & B), thereby providing two samples to compare average intensities, as well as allowing the 
 calculation of differential expression between the samples.
 
-#### Read in Affy Data
+#### Read in Data
 
 ```{r readAffy}
 affyDir <- "GSE5350_MAQC_AFX_123456_120CELs"
@@ -65,8 +66,8 @@ pDat <- data.frame(Sample=c(rep("A",nRep), rep("B", nRep)))
 fileNames <- paste(rep("AFX_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".CEL", sep="" )
 affyCel <- ReadAffy(filenames=fileNames, celfile.path=affyDir, phenoData=pDat)
 arrayQualityMetrics(expressionset=affyCel, outdir="affyQuality", do.logtransform=T, force=T)
-affyNorm <- rma(affyCel)
 ```
+
 
 ```{r readAgilent}
 agilDir <- "GSE5350_MAQC_AG1_123_60TXTs"
@@ -75,11 +76,35 @@ fileNames <- paste(rep("AG1_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq
 agilDat <- read.maimages(files=fileNames, path=agilDir, green.only=T, source="agilent")
 agilBack <- backgroundCorrect(agilDat, method="normexp")
 agilNorm <- normalizeBetweenArrays(agilBack, method="quantile")
-agilEset <- ExpressionSet(agilNorm$E)
-arrayQualityMetrics(expressionset=agilEset, outdir="agilQuality", do.logtransform=F, force=T)
+agilForQuality <- ExpressionSet(agilNorm$E)
+arrayQualityMetrics(expressionset=agilForQuality, outdir="agilQuality", do.logtransform=F, force=T)
+rm(agilForQuality)
 ```
 
+## Manufacturer Mappings
 
+For both the Affymetrix(r) and Agilent(r) data, generate summary values based on the mappings supplied
+by the manufacturer to Refseq transcript and Entrez gene. 
+
+```{r getAffySignal}
+affyNorm <- rma(affyCel)
+affyEset <- exprs(affyNorm)
+keepAffy <- grep("^AFFX", row.names(affyEset), invert=T)
+affyEset <- affyEset[keepAffy,] # got rid of the control probes
+```
+
+```{r getAgilentSignal}
+notControl <- agilNorm$genes$ControlType == 0
+spotID <- agilNorm$genes$ProbeName[notControl]
+
+agilEset <- agilNorm$E[notControl,]
+row.names(agilEset) <- spotID
+```
+
+```{r getMaps}
+affyMap <- read.table("GPL570-13270.txt", header=T, skip=16, sep="\t", quote="", strip.white=T)
+agilMap <- read.table("GPL1708-20418.txt", header=T, skip=20, sep="\t", quote="", comment.char="", strip.white=T)
+```
 
 ### References
 
