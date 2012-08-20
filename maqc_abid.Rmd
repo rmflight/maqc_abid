@@ -72,6 +72,10 @@ agilDir <- "GSE5350_MAQC_AG1_123_60TXTs"
 nRep <- 5
 fileNames <- paste(rep("AG1_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".txt", sep="" )
 agilDat <- read.maimages(files=fileNames, path=agilDir, green.only=T, source="agilent")
+agilBack <- backgroundCorrect(agilDat, method="normexp")
+agilNorm <- normalizeBetweenArrays(agilBack, method="quantile")
+agilEset <- ExpressionSet(agilNorm$E)
+arrayQualityMetrics(expressionset=agilEset, outdir="agilQuality", do.logtransform=F, force=T)
 ```
 
 
