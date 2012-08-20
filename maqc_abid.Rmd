@@ -9,6 +9,9 @@ knit_hooks$set(error = function(x, options) stop(x))
 ```{r rsetup, echo=FALSE}
 # these are extremely useful options for working in R
 options(save.defaults=list(compress="xz"), stringsAsFactors=FALSE)
+require(affy)
+require(arrayQualityMetrics)
+require(limma)
 ```
 
 # MAQC AbsIDConvert
@@ -36,8 +39,45 @@ For each conversion, the correlation of the signal intensities for matching prob
 rank of probes (using log fold change and p-value) after testing for differential expression between two conditions.
 
 Results: 
-AbsIDConvert was used to compare the intensities and ranks of probes measured in the MAQC dataset on the Affymetrix(R) 
-and Agilent(R) one color platforms. Agreement between the platforms was found to improve as the different methodologies
+AbsIDConvert was used to compare the intensities and ranks of probes measured in the MAQC dataset on the Affymetrix(r) 
+and Agilent(r) one color platforms. Agreement between the platforms was found to improve as the different methodologies
 to define the **same** measurement were modified, with **1** having the least agreement, and **3** having the best
 agreement between the two platforms. This demonstrates that using genomic intervals as a basis for inter-platform comparisons
 is reliable, and improves the reproducibility of results obtained by multiple high-throughput genomics platforms.
+
+## Introduction
+
+*Need a bunch of stuff here about why this is so important*
+
+### Data
+
+[MicroArray Quality Control (MAQC)][maqcRef1] project data. This work uses the [Affymetrix(r)][affyDataDownload] and 
+[Agilent(r)][agilentDataDownload] one color array data from one location. Both types of arrays were hybridized to the same
+set of mRNA samples (A & B), thereby providing two samples to compare average intensities, as well as allowing the 
+calculation of differential expression between the samples.
+
+#### Read in Affy Data
+
+```{r readAffy}
+affyDir <- "GSE5350_MAQC_AFX_123456_120CELs"
+nRep <- 5
+pDat <- data.frame(Sample=c(rep("A",nRep), rep("B", nRep)))
+fileNames <- paste(rep("AFX_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".CEL", sep="" )
+affyDat <- ReadAffy(filenames=fileNames, celfile.path=affyDir, phenoData=pDat)
+arrayQualityMetrics(expressionset=affyDat, outdir="affyQuality", do.logtransform=T, force=T)
+```
+
+```{r readAgilent}
+agilDir <- "GSE5350_MAQC_AG1_123_60TXTs"
+nRep <- 5
+fileNames <- paste(rep("AG1_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".txt", sep="" )
+agilDat <- read.maimages(files=fileNames, path=agilDir, green.only=T, source="agilent")
+```
+
+
+
+### References
+
+[maqcRef1]: 
+[affyDataDownload]:
+[agilentDataDownload]: 
