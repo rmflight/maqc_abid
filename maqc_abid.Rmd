@@ -66,14 +66,16 @@ procAvgDat <- function(affyDat, affySamp, agilDat, agilSamp){
 
 	projA <- affy.A * rma.A$a1 + rma.A$a0
 	distA <- sqrt((affy.A - projA)^2 + (agil.A - projA)^2)
+	corA <- cor(affy.A, agil.A, method="spearman")
 
 	rma.B <- gx.rma(affy.B, agil.B, log=FALSE, x1lab="affy B", x2lab="agilent B")
 	projB <- affy.B * rma.B$a1 + rma.B$a0
 	distB <- sqrt((affy.B - projB)^2 + (agil.B - projB)^2)
+	corB <- cor(affy.B, agil.B, method="spearman")
 	sdA <- sd(distA)
 	sdB <- sd(distB)
-	return(list(A=list(affy=affy.A, agil=agil.A, reg=rma.A, proj=projA, dist=distA, sd=sdA),
-							B=list(affy=affy.B, agil=agil.B, reg=rma.B, proj=projB, dist=distB, sd=sdB)))
+	return(list(A=list(affy=affy.A, agil=agil.A, reg=rma.A, proj=projA, dist=distA, sd=sdA, sCor=corA),
+							B=list(affy=affy.B, agil=agil.B, reg=rma.B, proj=projB, dist=distB, sd=sdB, sCor=corB)))
 }
 ```
 
@@ -195,41 +197,14 @@ agilEntMap <- sapply(names(agilEntMap), function(x){as.character(agilEntMap[,x])
 agilAvgEnt <- calcAverageGene(agilEntMap, "ID", "GENE", agilEset)
 ```
 
-```{r reduce2common}
-affyAvgEnt <- affyAvgEnt[rownames(affyAvgEnt) %in% rownames(agilAvgEnt),]
-agilAvgEnt <- agilAvgEnt[rownames(agilAvgEnt) %in% rownames(affyAvgEnt),]
-
-affyAvgEnt <- affyAvgEnt[order(rownames(affyAvgEnt)),]
-agilAvgEnt <- agilAvgEnt[order(rownames(agilAvgEnt)),]
-
-all.equal(rownames(affyAvgEnt), rownames(agilAvgEnt))
-```
-
 Now that both the Affy and Agilent data sets have averages for each gene, we need to calculate an average for each sample
 on each platform, and then use orthogonal regression (as we expect a similar magnitude of errors on both platforms) to 
 derive some estimate of how much dispersion there is in the data.
 
-```{r avgSample}
-affyAvgEnt.A <- apply(affyAvgEnt[,pDat$Sample=="A"], 1, mean)
-affyAvgEnt.B <- apply(affyAvgEnt[,pDat$Sample == "B"], 1, mean)
-
-agilAvgEnt.A <- apply(agilAvgEnt[,pDat$Sample == "A"], 1, mean)
-agilAvgEnt.B <- apply(agilAvgEnt[,pDat$Sample == "B"], 1, mean)
-
-rma.A <- gx.rma(affyAvgEnt.A, agilAvgEnt.A, log=FALSE, x1lab="affy A", x2lab="agilent A")
-
-projA <- affyAvgEnt.A * rma.A$a1 + rma.A$a0
-distA <- sqrt((affyAvgEnt.A - projA)^2 + (agilAvgEnt.A - projA)^2)
-
-rma.B <- gx.rma(affyAvgEnt.B, agilAvgEnt.B, log=FALSE, x1lab="affy B", x2lab="agilent B")
-projB <- affyAvgEnt.B * rma.B$a1 + rma.B$a0
-distB <- sqrt((affyAvgEnt.B - projB)^2 + (agilAvgEnt.B - projB)^2)
-
-# test the function
-affyAvgEnt <- calcAverageGene(affyE1, "ID", "ENTREZ_GENE_ID", affyEset)
-agilAvgEnt <- calcAverageGene(agilEntMap, "ID", "GENE", agilEset)
-entRes <- procAvgDat(affyAvgEnt, pDat$Sample, agilAvgEnt, pDat$Sample)
+```{r results.Entrez}
+res.Entrez <- procAvgDat(affyAvgEnt, pDat$Sample, agilAvgEnt, pDat$Sample)
 ```
+
 
 
 ### References
