@@ -28,9 +28,12 @@ agilOrg <- read.table(file.path(agilDir, fileNames[1]), header=T, skip=9, sep="\
 max(agilOrg$FeatureNum)
 
 agilOrg$FeatureNum <- as.character(agilOrg$FeatureNum)
-agilDat$genes$FeatureNum <- as.character(agilDat$genes$Row * agilDat$genes$Col)
+
+
+agilDat$genes$FeatureNum <- as.character((agilDat$genes$Row - 1) * max(agilDat$genes$Col) + agilDat$genes$Col)
 
 
 ranFeat <- sample(agilDat$genes$FeatureNum, 20)
 
-agilDat$genes$ProbeName[(agilDat$genes$FeatureNum %in% ranFeat)]
+fromDat <- agilDat$genes$ProbeName[(agilDat$genes$FeatureNum %in% ranFeat)]
+fromOrg <- agilOrg$ProbeName[agilOrg$FeatureNum %in% ranFeat]
