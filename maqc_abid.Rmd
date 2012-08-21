@@ -186,7 +186,6 @@ Using the manufacturer annotations of probe ID to gene, assign probes and probes
 ```{r affySignal}
 affyE1 <- findSingle(affyMap$ENTREZ_GENE_ID, "///")
 affyE1 <- affyMap[affyE1, c("ID", "ENTREZ_GENE_ID")]
-affyEset <- affyEset[(row.names(affyEset) %in% affyE1$ID),]
 
 affyAvgEnt <- calcAverageGene(affyE1, "ID", "ENTREZ_GENE_ID", affyEset)
 ```
@@ -205,7 +204,29 @@ derive some estimate of how much dispersion there is in the data.
 res.Entrez <- procAvgDat(affyAvgEnt, pDat$Sample, agilAvgEnt, pDat$Sample)
 ```
 
+### Refseq
 
+```{r refseqRes}
+affyR1 <- findSingle(affyMap$RefSeq.Transcript.ID, "///")
+affyR1 <- affyMap[affyR1, c("ID", "RefSeq.Transcript.ID")]
+affyAvgRef <- calcAverageGene(affyR1, "ID", "RefSeq.Transcript.ID", affyEset)
+
+agilRMap <- agilMap[, c("ID", "REFSEQ")]
+agilRMap <- sapply(names(agilRMap), function(x){as.character(agilRMap[,x])})
+agilAvgRef <- calcAverageGene(agilRMap, "ID", "REFSEQ", agilEset)
+
+res.Refseq <- procAvgDat(affyAvgRef, pDat$Sample, agilAvgRef, pDat$Sample)
+```
+
+## AbsIDConvert Mappings to Gene Regions
+
+Using the Affymetrix(r) IDs provided, and the Agilent(r) sequences provided, we are going to map both to Entrez and Refseq
+using AbsIDConvert.
+
+```{r writeIDs}
+cat(rownames(affyEset), file="affyIDs.txt", sep="\n")
+# need to write agilent sequences to fasta file.
+```
 
 ### References
 
