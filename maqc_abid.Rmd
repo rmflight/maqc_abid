@@ -43,6 +43,38 @@ calcAverageGene <- function(map2map, fromCol, toCol, inVals){
 	}))
 	return(outVals)
 }
+
+### procAvgDat: after getting the per gene averages, process the data and generate all the statistics for each sample
+# assumes rownames are the same
+procAvgDat <- function(affyDat, affySamp, agilDat, agilSamp){
+	affyDat <- affyDat[rownames(affyDat) %in% rownames(agilDat),]
+	agilDat <- agilDat[rownames(agilDat) %in% rownames(affyDat),]
+
+	affyDat <- affyDat[order(rownames(affyDat)),]
+	agilDat <- agilDat[order(rownames(agilDat)),]
+
+	if (!all.equal(rownames(affyDat), rownames(agilDat))){
+		stop("Row names are not the same!")
+	}
+	affy.A <- apply(affyDat[, affySamp == "A"], 1, mean)
+	affy.B <- apply(affyDat[, affySamp == "B"], 1, mean)
+
+	agil.A <- apply(agilDat[, agilSamp == "A"], 1, mean)
+	agil.B <- apply(agilDat[, agilSamp == "B"], 1, mean)
+
+	rma.A <- gx.rma(affy.A, agil.A, log=FALSE, x1lab="affy A", x2lab="agilent A")
+
+	projA <- affy.A * rma.A$a1 + rma.A$a0
+	distA <- sqrt((affy.A - projA)^2 + (agil.A - projA)^2)
+
+	rma.B <- gx.rma(affy.B, agil.B, log=FALSE, x1lab="affy B", x2lab="agilent B")
+	projB <- affy.B * rma.B$a1 + rma.B$a0
+	distB <- sqrt((affy.B - projB)^2 + (agil.B - projB)^2)
+	sdA <- sd(distA)
+	sdB <- sd(distB)
+	return(list(A=list(affy=affy.A, agil=agil.A, reg=rma.A, proj=projA, dist=distA, sd=sdA),
+							B=list(affy=affy.B, agil=agil.B, reg=rma.B, proj=projB, dist=distB, sd=sdB)))
+}
 ```
 
 # MAQC AbsIDConvert
@@ -188,6 +220,15 @@ rma.A <- gx.rma(affyAvgEnt.A, agilAvgEnt.A, log=FALSE, x1lab="affy A", x2lab="ag
 
 projA <- affyAvgEnt.A * rma.A$a1 + rma.A$a0
 distA <- sqrt((affyAvgEnt.A - projA)^2 + (agilAvgEnt.A - projA)^2)
+
+rma.B <- gx.rma(affyAvgEnt.B, agilAvgEnt.B, log=FALSE, x1lab="affy B", x2lab="agilent B")
+projB <- affyAvgEnt.B * rma.B$a1 + rma.B$a0
+distB <- sqrt((affyAvgEnt.B - projB)^2 + (agilAvgEnt.B - projB)^2)
+
+# test the function
+affyAvgEnt <- calcAverageGene(affyE1, "ID", "ENTREZ_GENE_ID", affyEset)
+agilAvgEnt <- calcAverageGene(agilEntMap, "ID", "GENE", agilEset)
+entRes <- procAvgDat(affyAvgEnt, pDat$Sample, agilAvgEnt, pDat$Sample)
 ```
 
 
