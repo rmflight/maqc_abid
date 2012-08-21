@@ -1,18 +1,19 @@
 ```{r knitrSetup, echo=FALSE}
 # sets output for inline results nicely
-knit_hooks$set(inline = identity) 
+#knit_hooks$set(inline = identity) 
 
 # kills knitr if there is an error, therefore we don't waste time generating error messages
 knit_hooks$set(error = function(x, options) stop(x)) 
 ```
 
-```{r rsetup, echo=FALSE}
+```{r rsetup, echo=FALSE, warning=FALSE}
 # these are extremely useful options for working in R
 options(save.defaults=list(compress="xz"), stringsAsFactors=FALSE)
 require(affy)
 require(arrayQualityMetrics)
 require(limma)
 require(genefilter)
+require(rgr)
 ```
 
 ```{r functionDefs, echo=FALSE}
@@ -123,12 +124,17 @@ affyEset <- affyEset[keepAffy,] # got rid of the control probes
 ```
 
 ```{r getAgilentSignal}
+featureNum <- as.character((agilNorm$genes$Row - 1) * max(agilNorm$genes$Col) + agilNorm$genes$Col)
 notControl <- agilNorm$genes$ControlType == 0
-spotID <- rownames(agilNorm$genes[notControl,])
+spotID <- featureNum[notControl]
 
 agilEset <- agilNorm$E[notControl,]
 row.names(agilEset) <- spotID
 ```
+
+We are using the spot index on the array as a unique identifier, because of duplicate spot names, and the row and column
+indices between the data files and the map file do not follow the same order (for good reasons, but pain in the butt ones
+for us).
 
 ```{r getMaps}
 affyMap <- read.table("GPL570-13270.txt", header=T, skip=16, sep="\t", quote="", strip.white=T)
@@ -149,14 +155,39 @@ affyE1 <- affyMap[affyE1, c("ID", "ENTREZ_GENE_ID")]
 affyEset <- affyEset[(row.names(affyEset) %in% affyE1$ID),]
 
 affyAvgEnt <- calcAverageGene(affyE1, "ID", "ENTREZ_GENE_ID", affyEset)
-affyAvgEnt.A <- apply(affyAvgEnt[,pDat$Sample=="A"], 1, mean)
-affyAvgEnt.B <- apply(affyAvgEnt[,pDat$Sample == "B"], 1, mean)
 ```
 
 ```{r agilSignal}
 agilEntMap <- agilMap[, c("ID", "GENE")]
 agilEntMap <- sapply(names(agilEntMap), function(x){as.character(agilEntMap[,x])})
 agilAvgEnt <- calcAverageGene(agilEntMap, "ID", "GENE", agilEset)
+```
+
+```{r reduce2common}
+affyAvgEnt <- affyAvgEnt[rownames(affyAvgEnt) %in% rownames(agilAvgEnt),]
+agilAvgEnt <- agilAvgEnt[rownames(agilAvgEnt) %in% rownames(affyAvgEnt),]
+
+affyAvgEnt <- affyAvgEnt[order(rownames(affyAvgEnt)),]
+agilAvgEnt <- agilAvgEnt[order(rownames(agilAvgEnt)),]
+
+all.equal(rownames(affyAvgEnt), rownames(agilAvgEnt))
+```
+
+Now that both the Affy and Agilent data sets have averages for each gene, we need to calculate an average for each sample
+on each platform, and then use orthogonal regression (as we expect a similar magnitude of errors on both platforms) to 
+derive some estimate of how much dispersion there is in the data.
+
+```{r avgSample}
+affyAvgEnt.A <- apply(affyAvgEnt[,pDat$Sample=="A"], 1, mean)
+affyAvgEnt.B <- apply(affyAvgEnt[,pDat$Sample == "B"], 1, mean)
+
+agilAvgEnt.A <- apply(agilAvgEnt[,pDat$Sample == "A"], 1, mean)
+agilAvgEnt.B <- apply(agilAvgEnt[,pDat$Sample == "B"], 1, mean)
+
+rma.A <- gx.rma(affyAvgEnt.A, agilAvgEnt.A, log=FALSE, x1lab="affy A", x2lab="agilent A")
+
+projA <- affyAvgEnt.A * rma.A$a1 + rma.A$a0
+distA <- sqrt((affyAvgEnt.A - projA)^2 + (agilAvgEnt.A - projA)^2)
 ```
 
 

@@ -37,3 +37,8 @@ ranFeat <- sample(agilDat$genes$FeatureNum, 20)
 
 fromDat <- agilDat$genes$ProbeName[(agilDat$genes$FeatureNum %in% ranFeat)]
 fromOrg <- agilOrg$ProbeName[agilOrg$FeatureNum %in% ranFeat]
+
+agilMap <- read.table("GPL1708-20418.txt", header=T, skip=20, sep="\t", quote="", comment.char="", strip.white=T)
+agilMap <- agilMap[(agilMap$CONTROL_TYPE == FALSE),]
+
+fromMap <- agilMap$SPOT_ID[agilMap$ID %in% ranFeat]
