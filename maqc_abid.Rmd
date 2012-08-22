@@ -233,6 +233,17 @@ names(agilSeq) <- agilMap$ID
 write.XStringSet(agilSeq, filepath="agilentSequences.fa")
 ```
 
+### AbsIDConvert Parameters
+
+#### Affy ProbeSets
+hg19, affyU133Plus2, **EntrezID, GeneSymbol, ensGene, geneid, knownGene, refSeqAli**, **Any, 0, 1, All, Same strand overlap**.
+
+![affyABIDParam](figures/affymetrixSettings.png)
+
+### Agilent Sequences
+hg19, **EntrezID, GeneSymbol, ensGene, geneid, knownGene, refSeqAli**, **No MM, All, -1**, **Any, 0, 1, All, Same strand overlap**
+![agilentABIDParam](figures/agilentSettings.png)
+
 ### References
 
 [maqcRef1]: 
