@@ -14,6 +14,7 @@ require(arrayQualityMetrics)
 require(limma)
 require(genefilter)
 require(rgr)
+require(Biostrings)
 ```
 
 ```{r functionDefs, echo=FALSE}
@@ -225,7 +226,11 @@ using AbsIDConvert.
 
 ```{r writeIDs}
 cat(rownames(affyEset), file="affyIDs.txt", sep="\n")
+
 # need to write agilent sequences to fasta file.
+agilSeq <- DNAStringSet(x=agilMap$SEQUENCE)
+names(agilSeq) <- agilMap$ID
+write.XStringSet(agilSeq, filepath="agilentSequences.fa")
 ```
 
 ### References
