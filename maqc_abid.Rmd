@@ -244,6 +244,24 @@ hg19, affyU133Plus2, **EntrezID, GeneSymbol, ensGene, geneid, knownGene, refSeqA
 hg19, **EntrezID, GeneSymbol, ensGene, geneid, knownGene, refSeqAli**, **No MM, All, -1**, **Any, 0, 1, All, Same strand overlap**
 ![agilentABIDParam](figures/agilentSettings.png)
 
+### Read in data
+
+```{r readABIDMappings}
+affyABIDMap <- read.table("abidMapping/affyIDs_ConversionResult.txt.gz", header=T, sep="\t")
+affyRanges <- read.table("abidMapping/affyIDs.range.gz", header=T, sep="\t")
+agilentABIDMap <- read.table("abidMapping/agilentSequences_ConversionResult.txt.gz", header=T, sep="\t")
+agilentRanges <- read.table("abidMapping/agilentSequences.range.gz", header=T, sep="\t")
+```
+
+### Check that probes don't align multiple locations
+
+For both the Affy(r) and Agilent(r) probes, lets check that they appear to map to only one location in the genome. If 
+they map to multiple locations, then we should remove it from further analysis. For Affy(r), this means that there should
+be no more than 1KB range for all the locations reported for the probeset, and for Agilent, there should be only one alignment
+reported.
+
+
+
 ### References
 
 [maqcRef1]: 
