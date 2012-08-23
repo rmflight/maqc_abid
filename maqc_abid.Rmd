@@ -256,10 +256,88 @@ agilentRanges <- read.table("abidMapping/agilentSequences.range.gz", header=T, s
 ### Check that probes don't align multiple locations
 
 For both the Affy(r) and Agilent(r) probes, lets check that they appear to map to only one location in the genome. If 
-they map to multiple locations, then we should remove it from further analysis. For Affy(r), this means that there should
-be no more than 1KB range for all the locations reported for the probeset, and for Agilent, there should be only one alignment
-reported.
+they map to multiple locations, then we should remove it from further analysis. For Affy(r), because the consensus sequence
+is what is mapped, this means that the sequence should only map to one chromosome, but overall distance could be large. 
+For Agilent, there should be only one alignment reported.
 
+
+```{r checkAffyProbesetMapping}
+affyUniq <- unique(affyRanges$name)
+affyInfo <- lapply(affyUniq, function(inAffy){
+	affyLoc <- affyRanges[(affyRanges$name %in% inAffy),]
+	nChr <- length(unique(affyLoc$seqnames))
+	nStr <- length(unique(affyLoc$strand))
+	if((nChr == 1) & (nStr == 1)){
+		aDist <- max(affyLoc$end) - min(affyLoc$start)
+		return(list(keep=TRUE, dist=aDist))
+	} else {
+		return(list(keep=FALSE, dist=NA))
+	}
+})
+names(affyInfo) <- affyUniq
+```
+
+```{r removeBadAffy}
+affyStatus <- sapply(affyInfo, function(x){x$keep})
+affyDist <- sapply(affyInfo, function(x){x$dist})
+keepAffy <- affyUniq[affyStatus]
+
+affyABIDMapKeep <- affyABIDMap[(affyABIDMap$affyU133Plus2 %in% keepAffy),]
+```
+
+```{r checkAgilentMapping}
+agilentDup <- agilentRanges$name[duplicated(agilentRanges$name)]
+agilentRanges <- agilentRanges[!(agilentRanges$name %in% agilentDup),]
+agilentABIDMapKeep <- agilentABIDMap[(agilentABIDMap$input %in% agilentRanges$name),]
+```
+
+Make sure that the columns of the maps are characters, and replace dashes with a zero length string.
+
+```{r asCharReplaceDash}
+affyABIDMapKeep <- sapply(names(affyABIDMapKeep), function(x){
+	#browser(expr=TRUE)
+	tmpDat <- affyABIDMapKeep[,x]
+	tmpDat <- as.character(tmpDat)
+	tmpDat[tmpDat %in% "-"] <- ""
+	tmpDat
+})
+agilentABIDMapKeep <- sapply(names(agilentABIDMapKeep), function(x){
+	#browser(expr=TRUE)
+	tmpDat <- agilentABIDMapKeep[,x]
+	tmpDat <- as.character(tmpDat)
+	tmpDat[tmpDat %in% "-"] <- ""
+	tmpDat
+})
+```
+
+```{r getsingleMapEntrez}
+affy.A.E1 <- findSingle(affyABIDMapKeep[,"EntrezID"], ",")
+affy.A.E1 <- affyABIDMapKeep[affy.A.E1, c("affyU133Plus2", "EntrezID")]
+affy.A.E1[,1] <- tolower(affy.A.E1[,1])
+affy.A.E.Signal <- calcAverageGene(map2map=affy.A.E1, fromCol="affyU133Plus2", toCol="EntrezID", inVals=affyEset)
+
+agil.A.E1 <- findSingle(agilentABIDMapKeep[,"EntrezID"], ",")
+agil.A.E1 <- agilentABIDMapKeep[agil.A.E1, c("input", "EntrezID")]
+agil.A.E.Signal <- calcAverageGene(map2map=agil.A.E1, fromCol="input", toCol="EntrezID", inVals=agilEset)
+
+res.ABID.Entrez <- procAvgDat(affy.A.E.Signal, pDat$Sample, agil.A.E.Signal, pDat$Sample)
+```
+
+```{r getsingleMapRef}
+affy.A.R1 <- findSingle(affyABIDMapKeep[,"refSeqAli"], ",")
+affy.A.R1 <- affyABIDMapKeep[affy.A.R1, c("affyU133Plus2", "refSeqAli")]
+affy.A.R1[,1] <- tolower(affy.A.R1[,1])
+affy.A.R.Signal <- calcAverageGene(map2map=affy.A.R1, fromCol="affyU133Plus2", toCol="refSeqAli", inVals=affyEset)
+
+agil.A.R1 <- findSingle(agilentABIDMapKeep[,"refSeqAli"], ",")
+agil.A.R1 <- agilentABIDMapKeep[agil.A.R1, c("input", "refSeqAli")]
+agil.A.R.Signal <- calcAverageGene(map2map=agil.A.R1, fromCol="input", toCol="refSeqAli", inVals=agilEset)
+
+res.ABID.RefSeq <- procAvgDat(affy.A.R.Signal, pDat$Sample, agil.A.R.Signal, pDat$Sample)
+```
+
+This doesn't appear to have done much better. Perhaps it is a problem with the default parameters of ABID only requiring
+a 1 BP overlap? Lets look at results where the conversions require at least a 10 BP overlap.
 
 
 ### References
