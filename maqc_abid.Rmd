@@ -65,7 +65,9 @@ procAvgDat <- function(affyDat, affySamp, agilDat, agilSamp){
 
 	rma.A <- gx.rma(affy.A, agil.A, log=FALSE, x1lab="affy A", x2lab="agilent A")
 
+	
 	projA <- affy.A * rma.A$a1 + rma.A$a0
+	
 	distA <- sqrt((affy.A - projA)^2 + (agil.A - projA)^2)
 	corA <- cor(affy.A, agil.A, method="spearman")
 
@@ -339,6 +341,169 @@ res.ABID.RefSeq <- procAvgDat(affy.A.R.Signal, pDat$Sample, agil.A.R.Signal, pDa
 This doesn't appear to have done much better. Perhaps it is a problem with the default parameters of ABID only requiring
 a 1 BP overlap? Lets look at results where the conversions require at least a 10 BP overlap.
 
+```{r readABID10}
+affyABID.10 <- read.table("abidMapping/affyIDs_ConversionResult_10bp.txt", header=T, sep="\t")
+agilentABID.10 <- read.table("abidMapping/agilentSequences_ConversionResult_10bp.txt", header=T, sep="\t")
+```
+
+
+```{r removeBadMappings}
+affyABID.10 <- affyABID.10[(affyABID.10$affyU133Plus2 %in% keepAffy),]
+agilentABID.10 <- agilentABID.10[(agilentABID.10$input %in% agilentRanges$name),]
+```
+
+Make sure that the columns of the maps are characters, and replace dashes with a zero length string.
+
+```{r asCharReplaceDash}
+affyABIDMap.10 <- sapply(names(affyABID.10), function(x){
+	#browser(expr=TRUE)
+	tmpDat <- affyABID.10[,x]
+	tmpDat <- as.character(tmpDat)
+	tmpDat[tmpDat %in% "-"] <- ""
+	tmpDat
+})
+agilentABID.10 <- sapply(names(agilentABID.10), function(x){
+	#browser(expr=TRUE)
+	tmpDat <- agilentABID.10[,x]
+	tmpDat <- as.character(tmpDat)
+	tmpDat[tmpDat %in% "-"] <- ""
+	tmpDat
+})
+```
+
+```{r getsingleMapEntrez}
+affy.A10.E <- findSingle(affyABID.10[,"EntrezID"], ",")
+affy.A10.E <- affyABID.10[affy.A10.E, c("affyU133Plus2", "EntrezID")]
+affy.A10.E[,1] <- tolower(affy.A10.E[,1])
+affy.A10.E.Signal <- calcAverageGene(map2map=affy.A10.E, fromCol="affyU133Plus2", toCol="EntrezID", inVals=affyEset)
+
+agil.A10.E <- findSingle(agilentABID.10[,"EntrezID"], ",")
+agil.A10.E <- agilentABID.10[agil.A10.E, c("input", "EntrezID")]
+agil.A10.E.Signal <- calcAverageGene(map2map=agil.A10.E, fromCol="input", toCol="EntrezID", inVals=agilEset)
+
+res.ABID.10.Entrez <- procAvgDat(affy.A10.E.Signal, pDat$Sample, agil.A10.E.Signal, pDat$Sample)
+```
+
+```{r getsingleMapRef}
+affy.A10.R1 <- findSingle(affyABID.10[,"refSeqAli"], ",")
+affy.A10.R1 <- affyABID.10[affy.A10.R1, c("affyU133Plus2", "refSeqAli")]
+affy.A10.R1[,1] <- tolower(affy.A10.R1[,1])
+affy.A10.R.Signal <- calcAverageGene(map2map=affy.A10.R1, fromCol="affyU133Plus2", toCol="refSeqAli", inVals=affyEset)
+
+agil.A10.R1 <- findSingle(agilentABID.10[,"refSeqAli"], ",")
+agil.A10.R1 <- agilentABID.10[agil.A10.R1, c("input", "refSeqAli")]
+agil.A10.R.Signal <- calcAverageGene(map2map=agil.A10.R1, fromCol="input", toCol="refSeqAli", inVals=agilEset)
+
+res.ABID.10.RefSeq <- procAvgDat(affy.A10.R.Signal, pDat$Sample, agil.A10.R.Signal, pDat$Sample)
+```
+
+## Overlap of Probes and Probesets Directly
+
+In the last conversion, the Agilent(r) probes were also converted to Affymetrix(r) probes. So lets examine the effects of
+that conversion directly. In this case, we will only use those probes and probesets where Agilent converts to a single
+probeset.
+
+```{r readABIDWithin}
+agilentABID.W <- read.table("abidMapping/agilentSequences_ConversionResult_within.txt", header=T, sep="\t")
+```
+
+
+```{r removeBadMappings}
+agilentABID.W <- agilentABID.W[(agilentABID.W$input %in% agilentRanges$name),]
+```
+
+Make sure that the columns of the maps are characters, and replace dashes with a zero length string.
+
+```{r asCharReplaceDash}
+agilentABID.W <- sapply(names(agilentABID.W), function(x){
+	#browser(expr=TRUE)
+	tmpDat <- agilentABID.W[,x]
+	tmpDat <- as.character(tmpDat)
+	tmpDat[tmpDat %in% "-"] <- ""
+	tmpDat
+})
+```
+
+```{r getSingleAgilent2Affy}
+agil.AW.a2a <- findSingle(agilentABID.W[, "affyU133Plus2"], ",")
+agil.AW.a2a <- agilentABID.W[agil.AW.a2a, c("input", "affyU133Plus2")]
+agil.AW.a2a[,2] <- tolower(agil.AW.a2a[,2])
+
+agil.AW.a2a.Signal <- calcAverageGene(map2map=agil.AW.a2a, fromCol="input", toCol="affyU133Plus2", inVals=agilEset)
+affy.AW.a2a.Signal <- affyEset[unique(agil.AW.a2a[,"affyU133Plus2"]),]
+
+res.ABID.W.over <- procAvgDat(affy.AW.a2a.Signal, pDat$Sample, agil.AW.a2a.Signal, pDat$Sample)
+```
+
+Still doesn't seem to be doing any good. So, lets go to probe level from Affy(r).
+
+## Probe level overlap: 10 bases
+
+```{r getAffyProbeData}
+require(hgu133plus2probe)
+data(hgu133plus2probe)
+affySeq <- DNAStringSet(hgu133plus2probe$sequence)
+names(affySeq) <- paste(hgu133plus2probe$Probe.Set.Name, hgu133plus2probe$x, hgu133plus2probe$y, sep=":")
+write.XStringSet(affySeq, file="affySequences.fa")
+
+tmpDat <- bg.correct(affyCel, method="rma")
+tmpDat <- normalize.AffyBatch.quantiles(tmpDat, type="pmonly")
+
+pIndx <- indexProbes(tmpDat, which="pm")
+useP <- names(pIndx)
+
+lenP <- sapply(pIndx, length) # how many probes in each probeset
+pName <- rep(useP, lenP)
+pIndx <- unlist(pIndx, use.names=F)
+pXY <- indices2xy(pIndx, abatch=tmpDat)
+
+newName <- paste(pName, pXY[,1], pXY[,2], sep=":")
+
+orgName <- unlist(pIndx, use.names=F)
+
+allInt <- pm(tmpDat) # grab the intensities
+
+ordName <- order(orgName)
+orgName <- orgName[ordName]
+newName <- newName[ordName]
+
+allInt <- allInt[(order(as.integer(rownames(allInt)))),]
+
+isSame <- identical(as.integer(rownames(allInt)), orgName)
+if (!isSame){
+	stop("Array locations do not match!", call.=FALSE) # stop if they are not
+}
+
+rownames(allInt) <- newName
+allInt <- log2(allInt)
+```
+
+Read in the mapping of Agilent to Affy probes.
+
+```{r readprobeOverlap}
+affyProbeLoc <- read.table("abidMapping/affySequences.map.gz", header=F, sep="\t")
+affyProbeLoc <- affyProbeLoc[(affyProbeLoc[,3] %in% unique(agilentRanges$seqnames)),]
+dupAffy <- affyProbeLoc[duplicated(affyProbeLoc[,1]),1]
+affyProbeLoc <- affyProbeLoc[!(affyProbeLoc[,1] %in% dupAffy),]
+
+keepAffyProbes <- affyProbeLoc[,1]
+agilent2affyProbes <- read.table("abidMapping/agilentSequences_ConversionResult_probes10bases.txt", header=T, sep="\t")
+agList2Affy <- strsplit(agilent2affyProbes[,2], ",")
+names(agList2Affy) <- agilent2affyProbes[,1]
+agList2Affy <- lapply(agList2Affy, function(x){
+	x <- gsub("^\\s+|\\s+$", "", x)
+	x <- tolower(x)
+	x[x %in% keepAffyProbes] # removes anything that mapped to multiple genomic locations
+	
+})
+affy2agList <- reverseSplit(agList2Affy)
+lenAffy2ag <- sapply(affy2agList, length) # remove anything that maps to more than one agilent probe
+affy2agList <- affy2agList[lenAffy2ag == 1]
+agList2Affy <- reverseSplit(affy2agList)
+agList2Len <- sapply(agList2Affy, length)
+```
+
+```
 
 ### References
 
