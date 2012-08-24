@@ -1,0 +1,36 @@
+```{r checkDist}
+affyDir <- "GSE5350_MAQC_AFX_123456_120CELs"
+nRep <- 5
+pDat <- data.frame(Sample=c(rep("A",nRep), rep("B", nRep)))
+fileNames <- paste(rep("AFX_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".CEL", sep="" )
+affyCel <- ReadAffy(filenames=fileNames, celfile.path=affyDir, phenoData=pDat)
+
+agilDir <- "GSE5350_MAQC_AG1_123_60TXTs"
+nRep <- 5
+fileNames <- paste(rep("AG1_1",nRep*2), c(rep("_A", nRep), rep("_B", nRep)), seq(1, nRep), ".txt", sep="" )
+agilDat <- read.maimages(files=fileNames, path=agilDir, green.only=T, source="agilent")
+agilBack <- backgroundCorrect(agilDat, method="normexp")
+agilNorm <- normalizeBetweenArrays(agilBack, method="quantile")
+
+agilBack2 <- agilBack$E
+agilBack2 <- agilBack2[notControl,]
+agilNorm2 <- normalizeBetweenArrays(agilBack2, "quantile")
+
+agilNorm3 <- normalizeBetweenArrays(agilBack2, "scale")
+
+ag1 <- data.frame(x=as.vector(log2(agilBack2)))
+af1 <- data.frame(x=as.vector((affyEset)))
+
+ggplot() + geom_density(aes(x=x, color="red"), data=ag1) + geom_density(aes(x=y, color="blue"), data=af1)
+
+agN2 <- data.frame(x=as.vector(log2(agilNorm2)))
+agN3 <- data.frame(x=as.vector(log2(agilNorm3)))
+
+ggplot() + geom_density(aes(x=x, colour="red"), data=ag1) + geom_density(aes(x=x, colour="blue"), data=agN2) + 	geom_density(aes(x=x, colour="green"), data=agN3) +	geom_density(aes(x=x, label="affy"), data=af1)
+
+```
+
+So what is going on here? Agilent is putting up this huge spike of density and completely squishing the range of values.
+
+Is this what should be happening when doing quantile normalization? Could we simulate this using some normally distributed
+data and inserting spikes to see what happens?
