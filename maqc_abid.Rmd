@@ -503,8 +503,36 @@ agList2Affy <- reverseSplit(affy2agList)
 agList2Len <- sapply(agList2Affy, length)
 ```
 
+Calculate averages for the Affy data based on this mapping.
+
+```{r calcAffy2AgAverages}
+useAg <- names(agList2Affy)
+affyAvgProbeOverlap <- matrix(0, length(useAg), ncol(allInt)) # set up output
+rownames(affyAvgProbeOverlap) <- useAg
+colnames(affyAvgProbeOverlap) <- colnames(allInt)
+
+invisible(sapply(useAg, function(x){
+	useName <- agList2Affy[[x]]
+	affyAvgProbeOverlap[x,] <<- apply(allInt[useName, , drop=F], 2, mean) # get average for each array
+}))
+
+agilAvgProbeOverlap <- agilEset[useAg,]
+res.ABID.ProbeOverlap <- procAvgDat(affyAvgProbeOverlap, pDat$Sample, agilAvgProbeOverlap, pDat$Sample)
 ```
 
+```{r checkIntervals}
+# this should be removed later
+is18 <- agList2Affy[agList2Len == 18]
+
+outFile <- "viewIntervals.gff"
+cat('track name=intervals description="intervals"', file=outFile, sep="\n")
+invisible(sapply(names(is18), function(inAg){
+	tmpDat <- agilentRanges[(agilentRanges$name == inAg),]
+	cat(paste(tmpDat[1,"seqnames"], "rmf", "exon", tmpDat[1, "start"], tmpDat[1, "end"], 1000, tmpDat[1, "strand"], ".", tmpDat[1, "name"], sep=" "), file=outFile, append=T, sep="\n")
+	tmp2 <- affyProbeLoc[(affyProbeLoc[,1] %in% is18[[inAg]]),]
+}))
+
+```
 ### References
 
 [maqcRef1]: 
